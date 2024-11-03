@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting-KU!</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+       body {
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+    background: linear-gradient(to bottom right, #f5f7fa, #c3cfe2);
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #333;
+}
+
+header {
+    width: 100%;
+    background-color: #3498db;
+    color: white;
+    padding: 30px 0;
+    text-align: center;
+    border-bottom: 4px solid #2980b9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    margin-top: 0px;
+}
+footer {
+    width: 100%;
+    background-color: #3498db;
+    color: white;
+    padding: 30px 0;
+    text-align: center;
+    border-bottom: 4px solid #2980b9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    margin-top: 15px;
+}
+header h1, footer p {
+    margin: 0;
+}
+
+main {
+    padding: 20px;
+    width: 90%;
+    max-width: 900px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    margin-top: 20px;
+    backdrop-filter: blur(10px);
+}
+
+h1 {
+    color: #2c3e50;
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+p {
+    font-size: 18px;
+    color: #000000;
+    margin-bottom: 20px;
+}
+
+.input-section, .poll {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.vote-button, .reset-button, .add-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, background-color 0.3s, box-shadow 0.3s;
+}
+
+.vote-button:hover, .reset-button:hover, .add-button:hover {
+    background-color: #2980b9;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.vote-button:active, .reset-button:active, .add-button:active {
+    background-color: #1e6a92;
+    transform: scale(0.98);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container {
+    max-width: 700px;
+    width: 100%;
+    margin: 30px auto; /* Margin auto memastikan elemen terpusat */
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex; /* Tambahkan flex untuk penyesuaian elemen */
+    justify-content: center; /* Pusatkan elemen secara horizontal */
+    align-items: center; /* Pusatkan elemen secara vertikal */
+}
+
+
+input[type="text"] {
+    padding: 12px;
+    border: 2px solid #bdc3c7;
+    border-radius: 12px;
+    font-size: 16px;
+    width: 250px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: border-color 0.3s;
+}
+
+input[type="text"]:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+canvas {
+    width: 100%;
+    border-radius: 12px;
+}
+
+#percentageResults {
+    font-size: 20px;
+    margin-top: 15px;
+    color: #34495e;
+    font-weight: bold;
+}
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Voting-KU  Tempat Voting Terbaik</h1>
+    </header>
+
+    <main>
+        <h1>Selamat Datang di Voting-KU!</h1>
+        <p>Mau Voting Apa Hari ini?</p>
+
+        <div class="input-section">
+            <input type="text" id="newOptionInput" placeholder="Masukkan Pilihan">
+            <button class="add-button" onclick="addOption()">Tambah Opsi</button>
+        </div>
+
+        <div class="poll" id="pollButtons"></div>
+
+        <button class="reset-button" onclick="resetPoll()">Reset</button>
+
+        <h2>Hasil Polling:</h2>
+        <div class="chart-container">
+            <canvas id="pollChart"></canvas>
+        </div>
+
+        <div id="percentageResults"></div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Voting-KU!. All Rights Reserved.</p>
+    </footer>
+
+<script>
+    let pollData = JSON.parse(localStorage.getItem('pollData')) || {};
+
+    function savePollData() {
+        localStorage.setItem('pollData', JSON.stringify(pollData));
+    }
+
+    function calculatePercentages() {
+        const totalVotes = Object.values(pollData).reduce((a, b) => a + b, 0);
+        const percentages = {};
+        for (let key in pollData) {
+            percentages[key] = totalVotes === 0 ? 0 : Math.round((pollData[key] / totalVotes) * 100);
+        }
+        return percentages;
+    }
+
+    function updatePollButtons() {
+        const pollButtonsContainer = document.getElementById('pollButtons');
+        pollButtonsContainer.innerHTML = '';
+        for (let option in pollData) {
+            const button = document.createElement('button');
+            button.className = 'vote-button';
+            button.innerText = `${option}`;
+            button.onclick = () => vote(option);
+            pollButtonsContainer.appendChild(button);
+        }
+    }
+
+    function vote(animal) {
+        pollData[animal] = (pollData[animal] || 0) + 1;
+        savePollData();
+        updateChart();
+        updatePercentages();
+    }
+
+    function addOption() {
+        const newOptionInput = document.getElementById('newOptionInput');
+        const newOption = newOptionInput.value.trim();
+        if (newOption && !pollData[newOption]) {
+            pollData[newOption] = 0;
+            savePollData();
+            updatePollButtons();
+            newOptionInput.value = '';
+        } else {
+            alert('Opsi sudah ada atau tidak valid!');
+        }
+    }
+
+    function resetPoll() {
+        pollData = {};
+        savePollData();
+        updateChart();
+        updatePercentages();
+        updatePollButtons();
+    }
+
+    const ctx = document.getElementById('pollChart').getContext('2d');
+    const pollChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(pollData),
+            datasets: [{
+                label: 'Jumlah Suara',
+                data: Object.values(pollData),
+                backgroundColor: ['#3498db', '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6'],
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeInOutBounce'
+            }
+        }
+    });
+
+    function updateChart() {
+        pollChart.data.labels = Object.keys(pollData);
+        pollChart.data.datasets[0].data = Object.values(pollData);
+        pollChart.update();
+    }
+
+    function updatePercentages() {
+        const percentages = calculatePercentages();
+        const percentageResultsDiv = document.getElementById('percentageResults');
+        percentageResultsDiv.innerHTML = '';
+        for (let key in percentages) {
+            const p = document.createElement('p');
+            p.innerText = `${key}: ${percentages[key]}%`;
+            percentageResultsDiv.appendChild(p);
+        }
+    }
+
+    updatePollButtons();
+    updateChart();
+    updatePercentages();
+</script>
+</body>
+</html>
+
